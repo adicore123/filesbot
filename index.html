@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BizBot — כותב תיאורי עסק</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-50: #E1F5EE;
+      --green-100: #9FE1CB;
+      --green-400: #1D9E75;
+      --green-600: #0F6E56;
+      --green-800: #085041;
+      --gray-50: #F7F7F5;
+      --gray-100: #EFEFEC;
+      --gray-200: #DEDED9;
+      --gray-400: #9E9E98;
+      --gray-700: #444441;
+      --gray-900: #1A1A18;
+      --white: #FFFFFF;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    html, body { height: 100%; font-family: 'Heebo', sans-serif; background: var(--gray-50); color: var(--gray-900); }
+
+    .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--white);
+      border-left: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 1.5rem;
+      gap: 1.5rem;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 40px; height: 40px;
+      background: var(--green-400);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 22px; height: 22px; fill: white; }
+    .brand-name { font-size: 18px; font-weight: 600; color: var(--gray-900); line-height: 1.2; }
+    .brand-tagline { font-size: 12px; color: var(--gray-400); font-weight: 300; }
+    .divider { height: 1px; background: var(--gray-100); }
+
+    .section-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--gray-400); letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+
+    .progress-section { flex: 1; }
+    .step-list { display: flex; flex-direction: column; gap: 6px; }
+    .step-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: var(--radius-sm); transition: background 0.2s;
+    }
+    .step-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 2px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--gray-400);
+      flex-shrink: 0; transition: all 0.3s;
+    }
+    .step-item.active .step-dot { border-color: var(--green-400); background: var(--green-50); color: var(--green-600); }
+    .step-item.done .step-dot { border-color: var(--green-400); background: var(--green-400); color: white; font-size: 13px; }
+    .step-label { font-size: 13px; color: var(--gray-400); transition: color 0.2s; }
+    .step-item.active .step-label { color: var(--gray-900); font-weight: 500; }
+    .step-item.done .step-label { color: var(--green-600); }
+
+    .sidebar-footer { font-size: 11px; color: var(--gray-400); line-height: 1.6; }
+    .sidebar-footer a { color: var(--green-600); text-decoration: none; }
+
+    /* Main */
+    .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 1rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .topbar-title { font-size: 15px; font-weight: 500; }
+    .topbar-sub { font-size: 13px; color: var(--gray-400); }
+    .restart-btn {
+      padding: 7px 16px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      font-family: 'Heebo', sans-serif;
+      font-size: 13px; color: var(--gray-700);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .restart-btn:hover { border-color: var(--green-400); color: var(--green-600); }
+
+    /* Messages */
+    .messages {
+      flex: 1; overflow-y: auto; padding: 2rem;
+      display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
+    }
+    .msg { display: flex; gap: 12px; align-items: flex-end; animation: fadeUp 0.3s ease; }
+    .msg.bot { flex-direction: row; }
+    .msg.user { flex-direction: row-reverse; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; flex-shrink: 0;
+    }
+    .bot .avatar { background: var(--green-50); color: var(--green-600); border: 1.5px solid var(--green-100); }
+    .user .avatar { background: var(--gray-100); color: var(--gray-700); }
+
+    .bubble { max-width: 72%; padding: 12px 16px; line-height: 1.7; font-size: 14.5px; }
+    .bot .bubble {
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 4px 16px 16px 16px; color: var(--gray-900);
+      box-shadow: var(--shadow-sm);
+    }
+    .user .bubble { background: var(--green-400); color: white; border-radius: 16px 4px 16px 16px; }
+
+    .typing-bubble {
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 4px 16px 16px 16px;
+      padding: 14px 18px; display: flex; gap: 5px; align-items: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-400); animation: bounce 1.3s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.18s; }
+    .dot:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+
+    .result-block {
+      background: var(--green-50); border: 1.5px solid var(--green-100);
+      border-radius: var(--radius-md); padding: 1.25rem 1.5rem; margin-top: 8px;
+    }
+    .result-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .result-block-title { font-size: 13px; font-weight: 600; color: var(--green-600); }
+    .copy-btn {
+      padding: 6px 14px; background: var(--green-400); color: white;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'Heebo', sans-serif; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .copy-btn:hover { background: var(--green-600); }
+    .result-text { font-size: 14px; line-height: 1.9; color: var(--green-800); white-space: pre-wrap; }
+
+    /* Input */
+    .input-area {
+      background: var(--white); border-top: 1px solid var(--gray-200);
+      padding: 1rem 2rem; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0;
+    }
+    textarea {
+      flex: 1; padding: 12px 16px;
+      font-family: 'Heebo', sans-serif; font-size: 14px;
+      border: 1.5px solid var(--gray-200); border-radius: var(--radius-md);
+      resize: none; outline: none; height: 48px; max-height: 120px;
+      background: var(--gray-50); color: var(--gray-900);
+      transition: border-color 0.2s, background 0.2s;
+      direction: rtl;
+    }
+    textarea:focus { border-color: var(--green-400); background: var(--white); }
+    textarea::placeholder { color: var(--gray-400); }
+    textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .send-btn {
+      width: 48px; height: 48px; background: var(--green-400);
+      border: none; border-radius: var(--radius-md); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .send-btn:hover:not(:disabled) { background: var(--green-600); }
+    .send-btn:active:not(:disabled) { transform: scale(0.95); }
+    .send-btn:disabled { background: var(--gray-200); cursor: not-allowed; }
+    .send-btn svg { width: 20px; height: 20px; fill: white; }
+    .send-btn:disabled svg { fill: var(--gray-400); }
+
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; color: var(--gray-400); text-align: center; padding: 2rem;
+    }
+    .empty-icon {
+      width: 56px; height: 56px; background: var(--gray-100);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+    .empty-icon svg { width: 28px; height: 28px; fill: var(--gray-400); }
+    .empty-title { font-size: 16px; font-weight: 500; color: var(--gray-700); }
+    .empty-sub { font-size: 13px; max-width: 280px; line-height: 1.6; }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+    @media (max-width: 640px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .sidebar { border-left: none; border-bottom: 1px solid var(--gray-200); padding: 1rem; gap: 1rem; }
+      .progress-section, .sidebar-footer { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">BizBot</div>
+        <div class="brand-tagline">כותב תיאורי עסק בעברית</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="progress-section">
+      <div class="section-label">שלבי השיחה</div>
+      <div class="step-list" id="step-list">
+        <div class="step-item" data-step="0"><div class="step-dot"><span>1</span></div><div class="step-label">שם העסק</div></div>
+        <div class="step-item" data-step="1"><div class="step-dot"><span>2</span></div><div class="step-label">תחום פעילות</div></div>
+        <div class="step-item" data-step="2"><div class="step-dot"><span>3</span></div><div class="step-label">קהל יעד</div></div>
+        <div class="step-item" data-step="3"><div class="step-dot"><span>4</span></div><div class="step-label">יתרון תחרותי</div></div>
+        <div class="step-item" data-step="4"><div class="step-dot"><span>5</span></div><div class="step-label">מיקום וותק</div></div>
+        <div class="step-item" data-step="5"><div class="step-dot"><span>6</span></div><div class="step-label">גאווה מיוחדת</div></div>
+        <div class="step-item" data-step="6"><div class="step-dot"><span>✦</span></div><div class="step-label">יוצר תיאור</div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="sidebar-footer">
+      מופעל על ידי <a href="https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3" target="_blank">Mistral-7B</a> דרך Hugging Face.<br/>
+      המפתח מאובטח בצד השרת.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">BizBot</div>
+        <div class="topbar-sub" id="topbar-sub">מוכן להתחיל</div>
+      </div>
+      <button class="restart-btn" onclick="restartChat()">התחל מחדש</button>
+    </div>
+
+    <div id="messages-wrap" class="messages"></div>
+
+    <div class="input-area">
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+      <textarea id="user-input" placeholder="כתוב את תשובתך כאן..."
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+    </div>
+  </main>
+</div>
+
+<script>
+  const QUESTIONS = [
+    "שלום! אני BizBot — אני אעזור לך לכתוב תיאור עסק מקצועי ומשכנע בעברית.\n\nבואו נתחיל — מה שם העסק שלך?",
+    "מעולה! ומה תחום הפעילות הראשי של העסק?",
+    "יופי. מי קהל היעד שלך — למי העסק פונה?",
+    "ומה מייחד אותך מהמתחרים? מה הסיבה שלקוחות בוחרים דווקא בך?",
+    "כמה שנים העסק פעיל, ואיפה הוא ממוקם?",
+    "שאלה אחרונה — יש שירות, מוצר, או הישג שאתה במיוחד גאה בו?"
+  ];
+  const KEYS = ['name','field','audience','advantage','location_years','pride'];
+
+  let step = 0;
+  let answers = {};
+  let busy = false;
+
+  function init() {
+    startChat();
+  }
+
+  function startChat() {
+    step = 0; answers = {};
+    document.getElementById('messages-wrap').innerHTML = '';
+    updateSteps(-1);
+    addBotMsg(QUESTIONS[0]);
+    updateSteps(0);
+    document.getElementById('topbar-sub').textContent = 'שלב 1 מתוך 6';
+  }
+
+  function restartChat() { startChat(); }
+
+  function addBotMsg(text) {
+    const wrap = document.getElementById('messages-wrap');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = `<div class="avatar">B</div><div class="bubble">${text.replace(/\n/g,'<br>')}</div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function addUserMsg(text) {
+    const wrap = document.getElementById('messages-wrap');
+    const div = document.createElement('div');
+    div.className = 'msg user';
+    div.innerHTML = `<div class="bubble">${esc(text)}</div><div class="avatar">א</div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function showTyping() {
+    const wrap = document.getElementById('messages-wrap');
+    const div = document.createElement('div');
+    div.className = 'msg bot'; div.id = 'typing-msg';
+    div.innerHTML = `<div class="avatar">B</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-msg');
+    if (t) t.remove();
+  }
+
+  function showResult(text) {
+    const wrap = document.getElementById('messages-wrap');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = `
+      <div class="avatar">B</div>
+      <div style="max-width:82%">
+        <div class="bubble" style="border-radius:4px 16px 16px 16px;margin-bottom:8px;">
+          הנה התיאור שכתבתי עבור "${esc(answers.name)}" — מרגיש חופשי לבקש שינויים!
+        </div>
+        <div class="result-block">
+          <div class="result-block-header">
+            <span class="result-block-title">תיאור העסק מוכן</span>
+            <button class="copy-btn" onclick="copyText(this)">העתק</button>
+          </div>
+          <div class="result-text">${esc(text)}</div>
+        </div>
+      </div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text || busy) return;
+    input.value = '';
+    addUserMsg(text);
+    answers[KEYS[step]] = text;
+    step++;
+    busy = true;
+
+    if (step < QUESTIONS.length) {
+      updateSteps(step);
+      document.getElementById('topbar-sub').textContent = `שלב ${step + 1} מתוך 6`;
+      showTyping();
+      await delay(600);
+      removeTyping();
+      addBotMsg(QUESTIONS[step]);
+    } else {
+      updateSteps(6);
+      document.getElementById('topbar-sub').textContent = 'יוצר תיאור...';
+      document.getElementById('send-btn').disabled = true;
+      input.disabled = true;
+      showTyping();
+      await generate();
+      document.getElementById('send-btn').disabled = false;
+      input.disabled = false;
+      input.placeholder = 'בקש שינויים או הוספות...';
+      document.getElementById('topbar-sub').textContent = 'תיאור מוכן';
+    }
+    busy = false;
+  }
+
+  async function generate() {
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (!res.ok) throw new Error(data.error || 'שגיאת שרת');
+      showResult(data.result);
+    } catch (err) {
+      removeTyping();
+      addBotMsg(`אירעה שגיאה: ${err.message}`);
+    }
+  }
+
+  function updateSteps(active) {
+    document.querySelectorAll('.step-item').forEach(el => {
+      const s = parseInt(el.dataset.step);
+      el.classList.remove('active','done');
+      if (s < active) el.classList.add('done');
+      else if (s === active) el.classList.add('active');
+    });
+  }
+
+  function copyText(btn) {
+    const text = btn.closest('.result-block').querySelector('.result-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'הועתק!';
+      setTimeout(() => btn.textContent = 'העתק', 2000);
+    });
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  document.getElementById('user-input').addEventListener('input', function() {
+    this.style.height = '48px';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  init();
+</script>
+</body>
+</html>
